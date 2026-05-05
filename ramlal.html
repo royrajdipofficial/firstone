@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ThreadCraft — AI T-Shirt Designer</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --ink: #0f0e0c;
+    --paper: #f5f3ee;
+    --cream: #ede9e0;
+    --accent: #e84f2b;
+    --accent2: #2b6be8;
+    --muted: #8a8880;
+    --border: #d4d0c8;
+    --panel: #ffffff;
+    --radius: 12px;
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* TOP BAR */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    height: 52px;
+    background: var(--ink);
+    color: white;
+    flex-shrink: 0;
+  }
+  .topbar-brand {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 18px;
+    letter-spacing: -0.5px;
+  }
+  .topbar-brand span { color: var(--accent); }
+  .topbar-actions { display: flex; gap: 8px; }
+  .btn {
+    padding: 6px 16px;
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    transition: all 0.15s;
+  }
+  .btn-ghost { background: rgba(255,255,255,0.1); color: white; }
+  .btn-ghost:hover { background: rgba(255,255,255,0.2); }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover { background: #c93f1e; }
+
+  /* MAIN LAYOUT */
+  .workspace {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* LEFT TOOLS PANEL */
+  .left-panel {
+    width: 64px;
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 12px 0;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+  .tool-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    color: var(--muted);
+    font-size: 10px;
+    transition: all 0.15s;
+  }
+  .tool-btn:hover, .tool-btn.active {
+    background: var(--cream);
+    color: var(--ink);
+  }
+  .tool-btn svg { width: 20px; height: 20px; }
+  .tool-sep { width: 32px; height: 1px; background: var(--border); margin: 4px 0; }
+
+  /* ELEMENTS SIDEBAR */
+  .elements-panel {
+    width: 240px;
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+  .panel-header {
+    padding: 14px 16px 10px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+  }
+  .panel-search {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .panel-search input {
+    width: 100%;
+    padding: 7px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    outline: none;
+  }
+  .panel-search input:focus { border-color: var(--accent2); }
+  .panel-scroll { overflow-y: auto; flex: 1; padding: 12px; }
+
+  .section-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+    margin-top: 12px;
+  }
+  .section-label:first-child { margin-top: 0; }
+
+  .shapes-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 4px; }
+  .shape-item {
+    aspect-ratio: 1;
+    border-radius: 8px;
+    border: 1.5px solid var(--border);
+    background: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+  }
+  .shape-item:hover { border-color: var(--accent); transform: scale(1.05); }
+  .shape-item svg { width: 22px; height: 22px; color: var(--ink); }
+
+  .text-styles { display: flex; flex-direction: column; gap: 6px; }
+  .text-style-item {
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1.5px solid var(--border);
+    background: white;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .text-style-item:hover { border-color: var(--accent); }
+  .text-style-item .ts-preview { font-size: 15px; font-weight: 700; color: var(--ink); font-family: 'Syne', sans-serif; }
+  .text-style-item .ts-label { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+  .colors-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; }
+  .color-swatch {
+    aspect-ratio: 1;
+    border-radius: 6px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.15s;
+  }
+  .color-swatch:hover { transform: scale(1.15); border-color: var(--ink); }
+
+  /* CANVAS AREA */
+  .canvas-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--cream);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .canvas-toolbar {
+    position: absolute;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 6px 8px;
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    z-index: 10;
+  }
+  .ctool {
+    width: 32px; height: 32px;
+    border-radius: 7px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--muted);
+    transition: all 0.15s;
+  }
+  .ctool:hover { background: var(--cream); color: var(--ink); }
+  .ctool svg { width: 16px; height: 16px; }
+  .ctool-sep { width: 1px; height: 20px; background: var(--border); margin: 0 2px; }
+
+  /* SHIRT CANVAS */
+  .shirt-wrap {
+    position: relative;
+    width: 360px;
+    height: 420px;
+    filter: drop-shadow(0 8px 32px rgba(0,0,0,0.12));
+  }
+  .shirt-svg-bg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1;
+  }
+  .shirt-canvas {
+    position: absolute;
+    top: 80px;
+    left: 70px;
+    width: 220px;
+    height: 250px;
+    z-index: 2;
+    cursor: crosshair;
+  }
+  .shirt-color-bar {
+    position: absolute;
+    bottom: -48px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 8px;
+    background: white;
+    padding: 8px 12px;
+    border-radius: 50px;
+    border: 1px solid var(--border);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+  .shirt-clr {
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.15s;
+  }
+  .shirt-clr:hover, .shirt-clr.active { border-color: var(--ink); transform: scale(1.15); }
+
+  /* Canvas elements */
+  .canvas-element {
+    position: absolute;
+    cursor: move;
+    user-select: none;
+  }
+  .canvas-element.selected::after {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border: 2px dashed var(--accent2);
+    border-radius: 4px;
+    pointer-events: none;
+  }
+  .canvas-text {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 22px;
+    color: #1a1a1a;
+    white-space: nowrap;
+    padding: 2px 4px;
+  }
+  .canvas-text[contenteditable="true"] { outline: none; }
+
+  /* RIGHT AI PANEL */
+  .ai-panel {
+    width: 300px;
+    background: var(--panel);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+  }
+  .ai-header {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .ai-badge {
+    background: var(--ink);
+    color: white;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 20px;
+    letter-spacing: 0.5px;
+  }
+  .ai-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px; }
+  .ai-subtitle { font-size: 11px; color: var(--muted); margin-top: 1px; }
+
+  .ai-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .msg {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+  }
+  .msg-avatar {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .msg-avatar.ai { background: var(--ink); color: white; font-family: 'Syne', sans-serif; }
+  .msg-avatar.user { background: var(--accent2); color: white; }
+  .msg-bubble {
+    background: var(--cream);
+    border-radius: 4px 12px 12px 12px;
+    padding: 8px 11px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--ink);
+    max-width: 220px;
+  }
+  .msg.user { flex-direction: row-reverse; }
+  .msg.user .msg-bubble {
+    background: var(--accent2);
+    color: white;
+    border-radius: 12px 4px 12px 12px;
+  }
+
+  .ai-suggestions {
+    padding: 0 14px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .suggestion-chip {
+    padding: 7px 10px;
+    border-radius: 8px;
+    border: 1.5px solid var(--border);
+    background: white;
+    font-size: 12px;
+    cursor: pointer;
+    color: var(--ink);
+    text-align: left;
+    transition: all 0.15s;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .suggestion-chip:hover { border-color: var(--accent); color: var(--accent); background: #fff6f4; }
+
+  .ai-input-area {
+    padding: 12px 14px;
+    border-top: 1px solid var(--border);
+  }
+  .ai-input-wrap {
+    display: flex;
+    gap: 6px;
+    align-items: flex-end;
+  }
+  .ai-input {
+    flex: 1;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 8px 10px;
+    font-size: 13px;
+    font-family: 'DM Sans', sans-serif;
+    resize: none;
+    outline: none;
+    min-height: 38px;
+    max-height: 90px;
+    line-height: 1.4;
+    background: var(--cream);
+  }
+  .ai-input:focus { border-color: var(--accent2); background: white; }
+  .ai-send {
+    width: 36px; height: 36px;
+    border-radius: 9px;
+    background: var(--ink);
+    border: none;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.15s;
+  }
+  .ai-send:hover { background: var(--accent); }
+  .ai-send svg { width: 16px; height: 16px; color: white; }
+
+  .typing-dots span {
+    display: inline-block;
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--muted);
+    animation: dot 1.2s infinite;
+    margin: 0 1px;
+  }
+  .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes dot { 0%,80%,100%{transform:scale(1);opacity:.5} 40%{transform:scale(1.3);opacity:1} }
+
+  /* Properties panel that appears on selection */
+  .props-bar {
+    position: absolute;
+    bottom: 70px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 8px 12px;
+    display: none;
+    gap: 8px;
+    align-items: center;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+    z-index: 10;
+    white-space: nowrap;
+  }
+  .props-bar.visible { display: flex; }
+  .props-label { font-size: 11px; color: var(--muted); }
+  .props-color-row { display: flex; gap: 4px; }
+  .props-color {
+    width: 18px; height: 18px;
+    border-radius: 4px;
+    cursor: pointer;
+    border: 1.5px solid transparent;
+    transition: all 0.1s;
+  }
+  .props-color:hover { border-color: var(--ink); transform: scale(1.1); }
+  .props-size { display: flex; gap: 4px; }
+  .props-sz-btn {
+    width: 24px; height: 24px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: white;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--ink);
+    transition: all 0.1s;
+  }
+  .props-sz-btn:hover { background: var(--cream); }
+  .props-delete {
+    width: 26px; height: 26px;
+    border-radius: 6px;
+    border: 1px solid #ffd0d0;
+    background: #fff5f5;
+    cursor: pointer;
+    font-size: 13px;
+    display: flex; align-items: center; justify-content: center;
+    color: #e84f2b;
+    transition: all 0.1s;
+  }
+  .props-delete:hover { background: #ffe0e0; }
+
+  /* AI Apply button */
+  .ai-apply-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 6px;
+    padding: 5px 10px;
+    border-radius: 7px;
+    background: var(--ink);
+    color: white;
+    border: none;
+    font-size: 11px;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .ai-apply-btn:hover { background: var(--accent); }
+  .ai-apply-btn svg { width: 12px; height: 12px; }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="topbar-brand">Thread<span>Craft</span></div>
+  <div style="display:flex;align-items:center;gap:16px">
+    <span style="font-size:13px;color:rgba(255,255,255,0.5)">Untitled Design</span>
+  </div>
+  <div class="topbar-actions">
+    <button class="btn btn-ghost">Preview</button>
+    <button class="btn btn-primary">Order Now</button>
+  </div>
+</div>
+
+<div class="workspace">
+
+  <!-- LEFT TOOLS -->
+  <div class="left-panel">
+    <button class="tool-btn active" onclick="setTool('select')" title="Select">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M5 3l14 9-7 1-3 7L5 3z"/></svg>
+    </button>
+    <button class="tool-btn" onclick="setTool('text')" title="Text">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M4 6h16M12 6v14M8 20h8"/></svg>
+    </button>
+    <button class="tool-btn" onclick="setTool('shape')" title="Shapes">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="8" height="8" rx="1"/><circle cx="17" cy="7" r="4"/><path d="M7 14l5 7H2l5-7z"/></svg>
+    </button>
+    <div class="tool-sep"></div>
+    <button class="tool-btn" onclick="undo()" title="Undo">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M3 10h10a5 5 0 010 10H7"/><path d="M3 10l4-4m-4 4l4 4"/></svg>
+    </button>
+    <button class="tool-btn" onclick="clearCanvas()" title="Clear">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
+    </button>
+  </div>
+
+  <!-- ELEMENTS PANEL -->
+  <div class="elements-panel">
+    <div class="panel-header">Elements</div>
+    <div class="panel-search">
+      <input type="text" placeholder="Search elements...">
+    </div>
+    <div class="panel-scroll">
+
+      <div class="section-label">Add Text</div>
+      <div class="text-styles">
+        <div class="text-style-item" onclick="addText('YOUR TEXT', 32, 'Syne')">
+          <div class="ts-preview">Heading</div>
+          <div class="ts-label">Large bold title</div>
+        </div>
+        <div class="text-style-item" onclick="addText('Subheading', 20, 'Syne')">
+          <div class="ts-preview" style="font-size:13px">Subheading</div>
+          <div class="ts-label">Medium text</div>
+        </div>
+        <div class="text-style-item" onclick="addText('Body text here', 14, 'DM Sans')">
+          <div class="ts-preview" style="font-size:11px;font-family:DM Sans,sans-serif;font-weight:400">Body text</div>
+          <div class="ts-label">Small paragraph</div>
+        </div>
+      </div>
+
+      <div class="section-label">Shapes</div>
+      <div class="shapes-grid">
+        <div class="shape-item" onclick="addShape('rect')" title="Rectangle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="12" rx="2"/></svg>
+        </div>
+        <div class="shape-item" onclick="addShape('circle')" title="Circle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg>
+        </div>
+        <div class="shape-item" onclick="addShape('triangle')" title="Triangle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l9 18H3L12 3z"/></svg>
+        </div>
+        <div class="shape-item" onclick="addShape('star')" title="Star">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1 3-6z"/></svg>
+        </div>
+        <div class="shape-item" onclick="addShape('heart')" title="Heart">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+        </div>
+        <div class="shape-item" onclick="addShape('diamond')" title="Diamond">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l10 10-10 10L2 12 12 2z"/></svg>
+        </div>
+        <div class="shape-item" onclick="addShape('arrow')" title="Arrow">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </div>
+        <div class="shape-item" onclick="addShape('line')" title="Line">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 19L19 5"/></svg>
+        </div>
+      </div>
+
+      <div class="section-label">Colors</div>
+      <div class="colors-grid" id="colorPalette"></div>
+
+    </div>
+  </div>
+
+  <!-- CANVAS -->
+  <div class="canvas-area">
+    <div class="canvas-toolbar">
+      <button class="ctool" onclick="zoomIn()" title="Zoom In">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35M11 8v6M8 11h6"/></svg>
+      </button>
+      <button class="ctool" onclick="zoomOut()" title="Zoom Out">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35M8 11h6"/></svg>
+      </button>
+      <div class="ctool-sep"></div>
+      <button class="ctool" title="Front view" style="color:var(--ink);background:var(--cream)">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M20 7H4a2 2 0 00-2 2v6a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"/><path d="M12 7V5M8 7V5M16 7V5"/></svg>
+      </button>
+      <button class="ctool" title="Back view">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M20 7H4a2 2 0 00-2 2v6a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"/><path d="M12 7V5M8 7V5M16 7V5"/></svg>
+      </button>
+    </div>
+
+    <div class="shirt-wrap" id="shirtWrap">
+      <!-- T-shirt SVG -->
+      <svg class="shirt-svg-bg" viewBox="0 0 360 420" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path id="shirtPath" d="M120 30 C120 30 100 20 60 20 L20 80 L60 100 L60 380 L300 380 L300 100 L340 80 L300 20 C260 20 240 30 240 30 C240 50 180 70 120 30Z" fill="#f0ece4" stroke="#d4d0c8" stroke-width="1.5"/>
+        <path d="M120 30 C120 30 100 20 60 20 L20 80 L60 100" fill="none" stroke="#d4d0c8" stroke-width="1.5"/>
+        <path d="M240 30 C240 30 260 20 300 20 L340 80 L300 100" fill="none" stroke="#d4d0c8" stroke-width="1.5"/>
+        <!-- collar -->
+        <path d="M120 30 C140 55 160 65 180 65 C200 65 220 55 240 30" fill="none" stroke="#c8c4bc" stroke-width="1.5"/>
+      </svg>
+
+      <!-- Design canvas on shirt -->
+      <div class="shirt-canvas" id="shirtCanvas"></div>
+
+      <!-- Shirt color picker -->
+      <div class="shirt-color-bar">
+        <div class="shirt-clr active" style="background:#f0ece4" onclick="changeShirtColor('#f0ece4',this)" title="Cream"></div>
+        <div class="shirt-clr" style="background:#1a1a1a" onclick="changeShirtColor('#1a1a1a',this)" title="Black"></div>
+        <div class="shirt-clr" style="background:#2b5be8" onclick="changeShirtColor('#2b5be8',this)" title="Blue"></div>
+        <div class="shirt-clr" style="background:#e84f2b" onclick="changeShirtColor('#e84f2b',this)" title="Red"></div>
+        <div class="shirt-clr" style="background:#2a9d5c" onclick="changeShirtColor('#2a9d5c',this)" title="Green"></div>
+        <div class="shirt-clr" style="background:#9b2ef2" onclick="changeShirtColor('#9b2ef2',this)" title="Purple"></div>
+        <div class="shirt-clr" style="background:#f5c518" onclick="changeShirtColor('#f5c518',this)" title="Yellow"></div>
+      </div>
+    </div>
+
+    <!-- Properties bar -->
+    <div class="props-bar" id="propsBar">
+      <span class="props-label">Color</span>
+      <div class="props-color-row" id="propColors"></div>
+      <div class="ctool-sep"></div>
+      <span class="props-label">Size</span>
+      <div class="props-size">
+        <button class="props-sz-btn" onclick="resizeSelected(1.1)">+</button>
+        <button class="props-sz-btn" onclick="resizeSelected(0.9)">−</button>
+      </div>
+      <div class="ctool-sep"></div>
+      <button class="props-delete" onclick="deleteSelected()">✕</button>
+    </div>
+  </div>
+
+  <!-- AI PANEL -->
+  <div class="ai-panel">
+    <div class="ai-header">
+      <div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="ai-badge">AI</span>
+          <span class="ai-title">Design Assistant</span>
+        </div>
+        <div class="ai-subtitle">Ask me to tweak your design</div>
+      </div>
+    </div>
+
+    <div class="ai-messages" id="aiMessages">
+      <div class="msg ai">
+        <div class="msg-avatar ai">T</div>
+        <div class="msg-bubble">
+          Hey! I'm your AI design assistant. Design your t-shirt and I'll help you refine it — change colors, suggest text, improve layouts, and more!
+        </div>
+      </div>
+    </div>
+
+    <div class="ai-suggestions" id="aiSuggestions">
+      <button class="suggestion-chip" onclick="sendSuggestion(this.textContent)">💡 Suggest a cool slogan for my design</button>
+      <button class="suggestion-chip" onclick="sendSuggestion(this.textContent)">🎨 Make the colors more vibrant</button>
+      <button class="suggestion-chip" onclick="sendSuggestion(this.textContent)">✍️ Give me font pairing ideas</button>
+    </div>
+
+    <div class="ai-input-area">
+      <div class="ai-input-wrap">
+        <textarea class="ai-input" id="aiInput" placeholder="Ask AI to tweak your design..." rows="1"
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage()}"></textarea>
+        <button class="ai-send" onclick="sendMessage()">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ---- Color palette ----
+const COLORS = ['#0f0e0c','#e84f2b','#2b6be8','#2a9d5c','#f5c518','#9b2ef2','#e84fb3','#00b4d8','#f4a261','#ffffff','#6b7280','#d4d0c8'];
+const palette = document.getElementById('colorPalette');
+COLORS.forEach(c => {
+  const s = document.createElement('div');
+  s.className = 'color-swatch';
+  s.style.background = c;
+  if(c === '#ffffff') s.style.border = '1.5px solid #d4d0c8';
+  s.onclick = () => applyColorToSelected(c);
+  palette.appendChild(s);
+});
+
+const propColorsEl = document.getElementById('propColors');
+COLORS.slice(0,8).forEach(c => {
+  const s = document.createElement('div');
+  s.className = 'props-color';
+  s.style.background = c;
+  if(c === '#ffffff') s.style.border = '1.5px solid #ccc';
+  s.onclick = () => applyColorToSelected(c);
+  propColorsEl.appendChild(s);
+});
+
+// ---- State ----
+let selectedEl = null;
+let currentTool = 'select';
+let elementCount = 0;
+let history = [];
+
+// ---- Tool selection ----
+function setTool(t) {
+  currentTool = t;
+  document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  if(t === 'text') addText('YOUR TEXT', 26, 'Syne');
+}
+
+// ---- Add elements ----
+function addText(txt, size, font) {
+  const canvas = document.getElementById('shirtCanvas');
+  const el = document.createElement('div');
+  el.className = 'canvas-element canvas-text';
+  el.contentEditable = false;
+  el.textContent = txt;
+  el.style.fontSize = size + 'px';
+  el.style.fontFamily = font + ', sans-serif';
+  el.style.color = '#1a1a1a';
+  el.style.left = (30 + Math.random()*60) + 'px';
+  el.style.top = (40 + Math.random()*80) + 'px';
+  el.dataset.type = 'text';
+  el.dataset.id = ++elementCount;
+  makeDraggable(el);
+  el.ondblclick = () => { el.contentEditable = true; el.focus(); };
+  el.onblur = () => { el.contentEditable = false; };
+  canvas.appendChild(el);
+  selectElement(el);
+  saveHistory();
+}
+
+function addShape(type) {
+  const canvas = document.getElementById('shirtCanvas');
+  const el = document.createElement('div');
+  el.className = 'canvas-element';
+  el.style.left = (20 + Math.random()*80) + 'px';
+  el.style.top = (30 + Math.random()*100) + 'px';
+  el.dataset.type = 'shape';
+  el.dataset.shape = type;
+  el.dataset.id = ++elementCount;
+
+  const svgMap = {
+    rect: `<svg width="60" height="40" viewBox="0 0 60 40"><rect x="2" y="2" width="56" height="36" rx="4" fill="#1a1a1a"/></svg>`,
+    circle: `<svg width="50" height="50" viewBox="0 0 50 50"><circle cx="25" cy="25" r="23" fill="#1a1a1a"/></svg>`,
+    triangle: `<svg width="50" height="44" viewBox="0 0 50 44"><path d="M25 2L48 42H2L25 2Z" fill="#1a1a1a"/></svg>`,
+    star: `<svg width="50" height="50" viewBox="0 0 24 24"><path d="M12 2l3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1 3-6z" fill="#1a1a1a"/></svg>`,
+    heart: `<svg width="50" height="46" viewBox="0 0 24 22"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" fill="#e84f2b"/></svg>`,
+    diamond: `<svg width="44" height="50" viewBox="0 0 24 28"><path d="M12 2l10 12-10 12L2 14 12 2z" fill="#1a1a1a"/></svg>`,
+    arrow: `<svg width="60" height="30" viewBox="0 0 60 30"><path d="M4 15h42M36 6l14 9-14 9" fill="none" stroke="#1a1a1a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    line: `<svg width="70" height="10" viewBox="0 0 70 10"><path d="M2 5h66" stroke="#1a1a1a" stroke-width="3" stroke-linecap="round"/></svg>`,
+  };
+  el.innerHTML = svgMap[type] || svgMap.rect;
+  makeDraggable(el);
+  canvas.appendChild(el);
+  selectElement(el);
+  saveHistory();
+}
+
+// ---- Dragging ----
+function makeDraggable(el) {
+  let startX, startY, origX, origY;
+  el.addEventListener('mousedown', e => {
+    if(el.contentEditable === 'true') return;
+    e.preventDefault();
+    selectElement(el);
+    startX = e.clientX; startY = e.clientY;
+    origX = parseInt(el.style.left)||0;
+    origY = parseInt(el.style.top)||0;
+    const onMove = e => {
+      el.style.left = (origX + e.clientX - startX) + 'px';
+      el.style.top = (origY + e.clientY - startY) + 'px';
+    };
+    const onUp = () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      saveHistory();
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
+}
+
+// ---- Selection ----
+function selectElement(el) {
+  if(selectedEl) selectedEl.classList.remove('selected');
+  selectedEl = el;
+  el.classList.add('selected');
+  document.getElementById('propsBar').classList.add('visible');
+}
+
+document.getElementById('shirtCanvas').addEventListener('mousedown', e => {
+  if(e.target === e.currentTarget) {
+    if(selectedEl) selectedEl.classList.remove('selected');
+    selectedEl = null;
+    document.getElementById('propsBar').classList.remove('visible');
+  }
+});
+
+// ---- Actions ----
+function applyColorToSelected(color) {
+  if(!selectedEl) return;
+  if(selectedEl.dataset.type === 'text') {
+    selectedEl.style.color = color;
+  } else {
+    const svgs = selectedEl.querySelectorAll('svg path, svg rect, svg circle');
+    svgs.forEach(s => { if(s.getAttribute('fill') !== 'none') s.setAttribute('fill', color); if(s.getAttribute('stroke') && s.getAttribute('stroke') !== 'none') s.setAttribute('stroke', color); });
+  }
+  saveHistory();
+}
+
+function resizeSelected(factor) {
+  if(!selectedEl) return;
+  if(selectedEl.dataset.type === 'text') {
+    const cur = parseInt(selectedEl.style.fontSize)||22;
+    selectedEl.style.fontSize = Math.max(10, Math.min(80, cur * factor)) + 'px';
+  } else {
+    const svg = selectedEl.querySelector('svg');
+    if(svg) {
+      const w = (parseFloat(svg.getAttribute('width'))||50) * factor;
+      const h = (parseFloat(svg.getAttribute('height'))||50) * factor;
+      svg.setAttribute('width', Math.max(20, Math.min(200, w)));
+      svg.setAttribute('height', Math.max(20, Math.min(200, h)));
+    }
+  }
+  saveHistory();
+}
+
+function deleteSelected() {
+  if(selectedEl) { selectedEl.remove(); selectedEl = null; document.getElementById('propsBar').classList.remove('visible'); saveHistory(); }
+}
+
+function clearCanvas() {
+  document.getElementById('shirtCanvas').innerHTML = '';
+  selectedEl = null;
+  document.getElementById('propsBar').classList.remove('visible');
+  saveHistory();
+}
+
+function changeShirtColor(color, el) {
+  document.getElementById('shirtPath').setAttribute('fill', color);
+  document.querySelectorAll('.shirt-clr').forEach(s => s.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function zoomIn() { scaleShirt(1.1); }
+function zoomOut() { scaleShirt(0.9); }
+let shirtScale = 1;
+function scaleShirt(f) {
+  shirtScale = Math.max(0.5, Math.min(1.8, shirtScale * f));
+  document.getElementById('shirtWrap').style.transform = `scale(${shirtScale})`;
+}
+
+// ---- History ----
+function saveHistory() {
+  history.push(document.getElementById('shirtCanvas').innerHTML);
+  if(history.length > 30) history.shift();
+}
+function undo() {
+  if(history.length > 1) {
+    history.pop();
+    document.getElementById('shirtCanvas').innerHTML = history[history.length-1];
+    selectedEl = null;
+    document.getElementById('propsBar').classList.remove('visible');
+    document.querySelectorAll('.canvas-element').forEach(el => makeDraggable(el));
+  }
+}
+saveHistory();
+
+// ---- AI Chat ----
+const SYSTEM_PROMPT = `You are a helpful t-shirt design assistant embedded in a Canva-like design tool called ThreadCraft. 
+The user is designing a t-shirt and may ask for suggestions on:
+- Slogans, text ideas, or quotes for their design
+- Color palette suggestions  
+- Font or typography recommendations
+- Layout or composition tips
+- General design advice
+
+Keep responses SHORT (2-4 sentences max). Be creative, fun, and specific.
+When suggesting text to add to the shirt, format it clearly so the user can easily apply it.
+When suggesting colors, mention hex codes.`;
+
+async function sendMessage() {
+  const input = document.getElementById('aiInput');
+  const text = input.value.trim();
+  if(!text) return;
+  input.value = '';
+  appendMessage('user', text);
+  document.getElementById('aiSuggestions').style.display = 'none';
+  showTyping();
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: text }]
+      })
+    });
+    const data = await res.json();
+    removeTyping();
+    const reply = data.content?.[0]?.text || "I couldn't process that. Try again!";
+    appendMessage('ai', reply, true);
+  } catch(e) {
+    removeTyping();
+    appendMessage('ai', "Oops! Make sure the API is connected. In a real deployment, this would call Claude to help tweak your design!");
+  }
+}
+
+function sendSuggestion(txt) {
+  document.getElementById('aiInput').value = txt;
+  sendMessage();
+}
+
+function appendMessage(role, text, withApply) {
+  const msgs = document.getElementById('aiMessages');
+  const wrap = document.createElement('div');
+  wrap.className = `msg ${role}`;
+  const avatar = document.createElement('div');
+  avatar.className = `msg-avatar ${role}`;
+  avatar.textContent = role === 'ai' ? 'T' : 'U';
+  const bubble = document.createElement('div');
+  bubble.className = 'msg-bubble';
+  bubble.textContent = text;
+
+  if(withApply && role === 'ai') {
+    const applyBtn = document.createElement('button');
+    applyBtn.className = 'ai-apply-btn';
+    applyBtn.innerHTML = `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12l7-7 7 7"/></svg> Apply to design`;
+    applyBtn.onclick = () => applyAISuggestion(text);
+    bubble.appendChild(document.createElement('br'));
+    bubble.appendChild(applyBtn);
+  }
+
+  wrap.appendChild(avatar);
+  wrap.appendChild(bubble);
+  msgs.appendChild(wrap);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function applyAISuggestion(text) {
+  // Extract quoted text or first sentence as design text
+  const quoted = text.match(/"([^"]+)"/);
+  const toAdd = quoted ? quoted[1] : text.split('.')[0].replace(/[^a-zA-Z0-9 !?&]/g,'').trim().slice(0, 30);
+  if(toAdd.length > 2) addText(toAdd.toUpperCase(), 20, 'Syne');
+}
+
+function showTyping() {
+  const msgs = document.getElementById('aiMessages');
+  const wrap = document.createElement('div');
+  wrap.className = 'msg ai'; wrap.id = 'typingMsg';
+  wrap.innerHTML = `<div class="msg-avatar ai">T</div><div class="msg-bubble"><div class="typing-dots"><span></span><span></span><span></span></div></div>`;
+  msgs.appendChild(wrap);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+function removeTyping() {
+  const t = document.getElementById('typingMsg');
+  if(t) t.remove();
+}
+</script>
+</body>
+</html>
